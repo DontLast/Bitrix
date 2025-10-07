@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ru">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>BitrixCorp — Компании и Контакты</title>
+	<style>
+		body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; color: #111; }
+		h1 { margin-bottom: 8px; }
+		.actions { display: flex; gap: 12px; margin: 12px 0 24px; }
+		button { padding: 8px 12px; border: 1px solid #ccc; background: #fff; cursor: pointer; border-radius: 6px; }
+		button:hover { background: #f7f7f7; }
+		.grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+		@media (min-width: 1000px) { .grid { grid-template-columns: 1fr 1fr; } }
+		table { width: 100%; border-collapse: collapse; }
+		th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
+		th { background: #f5f5f5; }
+		thead th { position: sticky; top: 0; }
+		.table-wrap { max-height: 70vh; overflow: auto; border: 1px solid #eee; }
+		.caption { font-weight: 600; margin: 0 0 8px; }
+		.small { color: #555; font-size: 12px; }
+	</style>
+</head>
+<body>
+	<h1>BitrixCorp</h1>
+	<p>Компании и контакты, созданные через вебхук Bitrix24.</p>
+
+	<div class="actions">
+		<button id="btn-generate">Создать 100 компаний и контактов</button>
+		<button id="btn-clear">Очистить таблицы</button>
+	</div>
+
+	<div class="grid">
+		<section>
+			<p class="caption">Компании ({{ companies|length }})</p>
+			<div class="table-wrap">
+				<table>
+					<thead>
+						<tr>
+							<th>ID</th>
+							<th>Название</th>
+							<th>Контактов</th>
+							<th>Состав (ФИО)</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for c in companies %}
+						<tr>
+							<td>{{ c.id }}</td>
+							<td>{{ c.name }}</td>
+							<td>{{ c.contacts|length }}</td>
+							<td>
+								{% for p in c.contacts %}
+									{{ p.last_name }} {{ p.first_name }}{% if not loop.last %}, {% endif %}
+								{% endfor %}
+							</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<section>
+			<p class="caption">Контакты ({{ contacts|length }})</p>
+			<div class="table-wrap">
+				<table>
+					<thead>
+						<tr>
+							<th>ID</th>
+							<th>Фамилия</th>
+							<th>Имя</th>
+							<th>Пол</th>
+							<th>Возраст</th>
+							<th>Телефон</th>
+							<th>Компания</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for p in contacts %}
+						<tr>
+							<td>{{ p.id }}</td>
+							<td>{{ p.last_name }}</td>
+							<td>{{ p.first_name }}</td>
+							<td>{{ p.gender }}</td>
+							<td>{{ p.age }}</td>
+							<td>{{ p.phone }}</td>
+							<td>{{ p.company.name if p.company else '' }}</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		</section>
+	</div>
+
+	<script>
+		const secret = {{ webhook_secret|tojson }};
+		function url(path) {
+			const base = path.includes('?') ? `${path}&` : `${path}?`;
+			return secret ? `${base}secret=${encodeURIComponent(secret)}` : path;
+		}
+		document.getElementById('btn-generate').addEventListener('click', async () => {
+			try {
+				const res = await fetch(url('/bitrix/webhook'), { method: 'POST' });
+				if (!res.ok) throw new Error('Ошибка генерации');
+				location.reload();
+			} catch (e) {
+				alert(e.message || 'Ошибка');
+			}
+		});
+		document.getElementById('btn-clear').addEventListener('click', async () => {
+			if (!confirm('Удалить все компании и контакты?')) return;
+			try {
+				const res = await fetch(url('/bitrix/clear'), { method: 'POST' });
+				if (!res.ok) throw new Error('Ошибка очистки');
+				location.reload();
+			} catch (e) {
+				alert(e.message || 'Ошибка');
+			}
+		});
+	</script>
+</body>
+</html>
